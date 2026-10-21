@@ -109,7 +109,7 @@ for (const locale of (site.publicLocales ?? ["en"]).filter((l) => l !== "en")) {
     fs.writeFileSync(file, render(head, locale));
     written += 1;
     const own = head.alternates.find((a) => a.hreflang === locale)?.href;
-    if (head.inSitemap && head.indexable && own && !head.customCanonical) sitemap.set(own, day(head.lastModified));
+    if (head.inSitemap && head.indexable && own) sitemap.set(own, day(head.lastModified));
   }
 }
 fs.writeFileSync(

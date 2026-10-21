@@ -196,8 +196,9 @@ export function headFor(pathname, locale = "en") {
       : template.replace("{page}", own || nameOf(r.entry));
   const description = plain(seo.description) || site.defaultDescription || "";
   const path = r.prefix ? pathname.replace(/\/$/, "") : r.path;
-  const canonical =
-    seo.canonical || HOST + (r.path === "/" ? "/" : r.prefix ? r.path : path);
+  // Always the page's own address: the Website Manager no longer lets anyone override it, and an
+  // override saved before that is ignored.
+  const canonical = HOST + (r.path === "/" ? "/" : r.prefix ? r.path : path);
   const indexable =
     site.visibility !== "noindex" &&
     (r.robots ?? seo.robots ?? "index") !== "noindex";
@@ -237,7 +238,6 @@ export function headFor(pathname, locale = "en") {
   // What the sitemap needs to list only indexable originals, with when each last changed.
   head.indexable = indexable;
   head.self = HOST + (r.path === "/" ? "/" : r.prefix ? r.path : path);
-  head.customCanonical = Boolean(seo.canonical);
   head.lastModified = r.entry.lastModified ?? null;
   return head;
 }

@@ -42,8 +42,8 @@ function render(head, locale = "en") {
       : []),
     `<meta property="og:type" content="${head.type}" />`,
     `<meta property="og:site_name" content="${esc(head.siteName)}" />`,
-    `<meta property="og:title" content="${esc(head.title)}" />`,
-    `<meta property="og:description" content="${esc(head.description)}" />`,
+    `<meta property="og:title" content="${esc(head.ogTitle ?? head.title)}" />`,
+    `<meta property="og:description" content="${esc(head.ogDescription ?? head.description)}" />`,
     `<meta property="og:url" content="${esc(canonical)}" />`,
     `<meta property="og:locale" content="${OG_LOCALE[locale] ?? locale}" />`,
     ...(head.image

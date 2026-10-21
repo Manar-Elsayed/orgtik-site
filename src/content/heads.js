@@ -216,6 +216,9 @@ export function headFor(pathname, locale = "en") {
           ? "index,follow"
           : "noindex,follow",
     canonical,
+    // A shared link uses its own title and description when the page sets them (Website Manager → SEO → Social).
+    ogTitle: plain(seo.ogTitle) || title,
+    ogDescription: plain(seo.ogDescription) || description,
     image,
     imageAlt:
       plain(r.entry.image?.alt?.[locale] ?? r.entry.image?.alt?.en) || null,

@@ -1,0 +1,27 @@
+{
+  "name": "orgtik-site",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/prerender-heads.mjs",
+    "preview": "vite preview",
+    "test:cart": "node tests/cart.test.mjs",
+    "test": "node tests/cart.test.mjs && node --test tests/published-content.test.mjs tests/managed-page.test.mjs tests/roadmap-form.test.mjs tests/roadmap-community.test.mjs tests/preview-focus.test.mjs",
+    "format": "prettier --write src index.html vite.config.mjs",
+    "format:check": "prettier --check src index.html vite.config.mjs"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "5.0.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "vite": "6.4.4"
+  },
+  "devDependencies": {
+    "prettier": "3.9.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

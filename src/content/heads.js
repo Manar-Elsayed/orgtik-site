@@ -234,6 +234,11 @@ export function headFor(pathname, locale = "en") {
   head.jsonLd = jsonLd(r, head);
   // As the Website Manager's sitemap: robots.txt decides whether search engines read it at all.
   head.inSitemap = r.inSitemap !== false && seo.inSitemap !== false;
+  // What the sitemap needs to list only indexable originals, with when each last changed.
+  head.indexable = indexable;
+  head.self = HOST + (r.path === "/" ? "/" : r.prefix ? r.path : path);
+  head.customCanonical = Boolean(seo.canonical);
+  head.lastModified = r.entry.lastModified ?? null;
   return head;
 }
 

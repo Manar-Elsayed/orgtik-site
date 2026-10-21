@@ -2,6 +2,9 @@
 //
 //   node scripts/content-pull.mjs                     from http://localhost:4007/v2 (local-dev)
 //   CMS_API=https://… node scripts/content-pull.mjs   from another Website Manager
+//   node scripts/content-pull.mjs --build             the publish pipeline: CMS_API, else VITE_CMS_API;
+//                                                      if neither is set or the pull fails, the build
+//                                                      goes on with the packaged snapshot.
 //
 // The pages render from this copy, so the first paint never waits for the network and the site
 // keeps working if the Website Manager is down (D-012: last-known-good copy). Run it after
@@ -11,7 +14,16 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const API = process.env.CMS_API ?? "http://localhost:4007/v2";
+const BUILD = process.argv.includes("--build");
+const API = process.env.CMS_API || process.env.VITE_CMS_API || (BUILD ? null : "http://localhost:4007/v2");
+// What this pull did, for the build record (scripts/prerender-heads.mjs → /build.json).
+const INFO = path.join(here, "..", ".pull-info.json");
+const record = (info) => fs.writeFileSync(INFO, JSON.stringify({ at: new Date().toISOString(), ...info }));
+if (!API) {
+  console.log("content: no CMS_API or VITE_CMS_API, building from the packaged snapshot");
+  record({ source: "packaged", ok: false, reason: "not_configured" });
+  process.exit(0);
+}
 const TYPES = [
   "page",
   "global",
@@ -34,13 +46,23 @@ async function get(p, text = false) {
 }
 
 const entries = {};
-for (const t of TYPES) entries[t] = await get(`entries/${t}`);
-const ideas = await get("ideas");
-// What the head tags need (scripts/prerender-heads.mjs): the site's settings, its redirects and
-// robots.txt, as the Website Manager has them.
-const site = await get("site");
-const redirects = await get("redirects");
-const robots = await get("robots.txt", true);
+let ideas, site, redirects, robots;
+try {
+  for (const t of TYPES) entries[t] = await get(`entries/${t}`);
+  ideas = await get("ideas");
+  // What the head tags need (scripts/prerender-heads.mjs): the site's settings, its redirects and
+  // robots.txt, as the Website Manager has them.
+  site = await get("site");
+  redirects = await get("redirects");
+  robots = await get("robots.txt", true);
+} catch (error) {
+  if (!BUILD) throw error;
+  // A publish never breaks the site: the last good copy stays.
+  console.warn(`content: couldn't reach ${API} (${error.message}); building from the packaged snapshot`);
+  record({ source: "packaged", ok: false, reason: "unreachable" });
+  process.exit(0);
+}
+record({ source: API, ok: true });
 const snapshot = {
   source: API,
   pulledAt: new Date().toISOString(),

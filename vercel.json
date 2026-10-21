@@ -4,63 +4,6 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
-  "redirects": [
-    {
-      "source": "/platform",
-      "destination": "/software#plan-builder",
-      "permanent": true
-    },
-    {
-      "source": "/pricing",
-      "destination": "/software#plan-builder",
-      "permanent": true
-    },
-    {
-      "source": "/platform/:path*",
-      "destination": "/software/:path*",
-      "permanent": true
-    },
-    {
-      "source": "/projects",
-      "destination": "/work",
-      "permanent": true
-    },
-    {
-      "source": "/projects/:path*",
-      "destination": "/work/:path*",
-      "permanent": true
-    },
-    {
-      "source": "/privacy",
-      "destination": "/legal/privacy",
-      "permanent": true
-    },
-    {
-      "source": "/terms",
-      "destination": "/legal/terms",
-      "permanent": true
-    },
-    {
-      "source": "/imprint",
-      "destination": "/legal/imprint",
-      "permanent": true
-    },
-    {
-      "source": "/sample-campaign",
-      "destination": "/services",
-      "permanent": false
-    },
-    {
-      "source": "/sample-renamed",
-      "destination": "/services",
-      "permanent": true
-    },
-    {
-      "source": "/sample-retired",
-      "destination": "/services",
-      "permanent": true
-    }
-  ],
   "rewrites": [
     {
       "source": "/software/plans/:path*",

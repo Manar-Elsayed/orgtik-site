@@ -72,7 +72,10 @@ function render(head, locale = "en") {
 }
 
 let written = 0;
-const sitemap = new Set();
+// The sitemap lists published originals search engines may index: a noindex page, a page whose
+// canonical names another address, or one left out of the sitemap is not listed.
+const sitemap = new Map();
+const day = (at) => (/^\d{4}-\d{2}-\d{2}/.test(at ?? "") ? at.slice(0, 10) : null);
 for (const address of addresses()) {
   const head = headFor(address);
   const file =
@@ -82,7 +85,7 @@ for (const address of addresses()) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, render(head));
   written += 1;
-  if (head.inSitemap) sitemap.add(head.canonical);
+  if (head.inSitemap && head.indexable && head.canonical === head.self) sitemap.set(head.canonical, day(head.lastModified));
 }
 
 // The not-found page: the app shows its "Page not found." view; the host answers with 404.
@@ -106,7 +109,7 @@ for (const locale of (site.publicLocales ?? ["en"]).filter((l) => l !== "en")) {
     fs.writeFileSync(file, render(head, locale));
     written += 1;
     const own = head.alternates.find((a) => a.hreflang === locale)?.href;
-    if (head.inSitemap && own) sitemap.add(own);
+    if (head.inSitemap && head.indexable && own && !head.customCanonical) sitemap.set(own, day(head.lastModified));
   }
 }
 fs.writeFileSync(
@@ -114,14 +117,49 @@ fs.writeFileSync(
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[
     ...sitemap,
   ]
-    .sort()
-    .map((loc) => `  <url><loc>${esc(loc)}</loc></url>`)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([loc, lastmod]) => `  <url><loc>${esc(loc)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}</url>`)
     .join("\n")}\n</urlset>\n`,
 );
+const robots = snapshot.robots ?? "User-agent: *\nDisallow: /\n";
+fs.writeFileSync(path.join(OUT, "robots.txt"), robots);
+
+// The redirects the server answers (middleware.js): the Website Manager's active ones handled on
+// the host. Browser-handled ones stay in the app (navigation.js).
+const serverRedirects = (snapshot.redirects ?? [])
+  .filter((r) => (r.handledBy ?? "host") === "host")
+  .map(({ from, to, code, query }) => ({ from, to, code: Number(code) === 302 ? 302 : 301, query: query === "drop" ? "drop" : "keep" }))
+  .sort((a, b) => a.from.localeCompare(b.from));
 fs.writeFileSync(
-  path.join(OUT, "robots.txt"),
-  snapshot.robots ?? "User-agent: *\nDisallow: /\n",
+  path.join(here, "..", "redirects.generated.js"),
+  `// Written by scripts/prerender-heads.mjs from the Website Manager's redirects. Don't edit by hand.\nexport default ${JSON.stringify(serverRedirects, null, 1)};\n`,
+);
+
+// The record of this build, which the Website Manager compares with its settings: what it was
+// built from and what it serves.
+let pull = { source: snapshot.source ?? "packaged", ok: false, at: snapshot.pulledAt ?? null };
+try {
+  pull = JSON.parse(fs.readFileSync(path.join(here, "..", ".pull-info.json"), "utf8"));
+} catch {
+  // A local build without a pull.
+}
+fs.writeFileSync(
+  path.join(OUT, "build.json"),
+  JSON.stringify(
+    {
+      builtAt: new Date().toISOString(),
+      pulledAt: pull.ok ? pull.at : (snapshot.pulledAt ?? null),
+      source: pull.ok ? "cms" : "packaged",
+      commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+      site: { visibility: site.visibility ?? "noindex", canonicalHost: site.canonicalHost ?? null, publicLocales: site.publicLocales ?? ["en"] },
+      redirects: serverRedirects,
+      browserRedirects: (snapshot.redirects ?? []).filter((r) => r.handledBy === "browser").map(({ from, to, code }) => ({ from, to, code })),
+      sitemap: { count: sitemap.size },
+    },
+    null,
+    1,
+  ) + "\n",
 );
 console.log(
-  `heads: ${written} addresses, 404.html, sitemap.xml (${sitemap.size} URLs), robots.txt (${site.visibility ?? "noindex"})`,
+  `heads: ${written} addresses, 404.html, sitemap.xml (${sitemap.size} URLs), robots.txt (${site.visibility ?? "noindex"}), ${serverRedirects.length} server redirects, build.json`,
 );
